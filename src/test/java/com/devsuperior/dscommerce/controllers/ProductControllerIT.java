@@ -19,6 +19,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -64,8 +66,8 @@ public class ProductControllerIT {
         productName = "Macbook Pro";
 
         //criando Produto para ser inserido
-        Category category = new Category(2L, "Eletrônico");
-        product = new Product(null, "Console Playstation 5", "Descrição Play5", 3999.90, "imgUrl");
+        Category category = new Category(2L, "Eletro");
+        product = new Product(null, "Console Playstation 5", "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Qui ad,", 3999.90, "https://raw.githubusercontent.com/devsuperior/dscatalog-resources/master/backend/img/1-big.jpg");
         product.getCategories().add(category);
         ProductDTO productDTO = new ProductDTO(product);
     }
@@ -108,9 +110,10 @@ public class ProductControllerIT {
                         .header("Authorization", "Bearer " + adminToken)
                         .content(jsonBody)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON));
+                        .accept(MediaType.APPLICATION_JSON))
+                                .andDo(MockMvcResultHandlers.print());
 
-        result.andExpect(status().isOk());
+        result.andExpect(status().isCreated());
         result.andExpect(jsonPath("$.id").value(26L));
         result.andExpect(jsonPath("$.name").value("Console Playstation 5"));
         result.andExpect(jsonPath("$.description").value("Descrição Play5"));
