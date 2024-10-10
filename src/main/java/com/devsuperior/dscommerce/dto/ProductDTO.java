@@ -71,4 +71,24 @@ public class ProductDTO {
 	public List<CategoryDTO> getCategories() {
 		return categories;
 	}
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setName(@Size(min = 3, max = 80, message = "Nome precisar ter de 3 a 80 caracteres") @NotBlank(message = "Campo requerido") String name) {
+        this.name = name;
+    }
+
+    public void setDescription(@Size(min = 10, message = "Descrição precisa ter no mínimo 10 caracteres") @NotBlank(message = "Campo requerido") String description) {
+        this.description = description;
+    }
+
+    public void setPrice(@NotNull(message = "Campo requerido") @Positive(message = "O preço deve ser positivo") Double price) {
+        this.price = price;
+    }
+
+    public void setImgUrl(String imgUrl) {
+        this.imgUrl = imgUrl;
+    }
 }
