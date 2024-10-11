@@ -523,3 +523,217 @@ Lembrar sempre de ver o que retorna na requisição Postman para fazer os expect
         result.andExpect(status().isUnauthorized());
     }
 ```
+
+# RestAssured
+
+Como abordarmos lá em cima, RestAssured é uma biblioteca usada para automatizar testes de API em aplicações. Ela nos permite testar e validar serviços REST de uma forma simples.
+
+A estrutura do projeto será do DSCommerce (Capítulo 5)
+
+## Documentação oficial
+
+[Veja aqui](https://rest-assured.io/)
+
+## Dependência
+
+```xml
+<!-- https://mvnrepository.com/artifact/io.rest-assured/rest-assured -->
+<dependency>
+    <groupId>io.rest-assured</groupId>
+    <artifactId>rest-assured</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+## Exemplo básico utilizando RestAssured
+
+Vamos considerar uma API de consulta de partida entre dois times, igual este JSON abaixo:
+
+![alt text](image-10.png)
+
+Considere que o endpoint para que possamos consultar essa partida seja: ``http://localhost:8080/events?id=390``
+
+Utilizando o RestAssured, podemos fazer uma requisição para esse endpoint "/events" e consulta o evento de id = 390. Após isso, podemos acessar os valores retornados do JSON e validá-los.
+
+```java
+@Test
+public void givenUrl_whenSuccessOnGetsResponseAndJsonHasRequiredKV_thenCorrect() {
+    get("/events?id=390").then().statusCode(200).assertThat()
+        .body("data.leagueId", equalTo(35));
+}
+```
+
+## Preparando tudo
+
+Ficaremos com dois projetos abertos na IDE. O DSCommerce e um criado especificamente para o RestAssured.
+
+O projeto criado especificamente terá: SpringWeb e a dependência do RestAssured.
+
+No ".properties" do projeto do RestAssured, colocaremos: ``server.port=8081``, já que o do DSCommerce vai iniciar no 8080.
+
+Como vamos testar as APIS, criaremos dentro do pacote testes um "ProductControllerRA. Para que os testes funcionem nesse teste de API remota, precisamos definir o endereço a ser chamado, veja:
+
+Ir no Github do RestAssured (static imports) e copiar as 3 linhas, [clique aqui](https://github.com/rest-assured/rest-assured/wiki/GettingStarted#static-imports).
+
+```java
+import static io.restassured.RestAssured.*;
+import static io.restassured.matcher.RestAssuredMatchers.*;
+import static org.hamcrest.Matchers.*;
+```
+
+Após importar, criar nosso setUp e inicializaremos uma variável ``baseURi``, veja:
+
+![alt text](image-12.png)
+
+Com isso, poderemos iniciar nossos exercícios. 
+
+# Exercícios de fixação: Testes de API com RestAssured
+
+## Problema 1: Consultar produto por ID
+
+Implemente o teste de API usando o REST Assured para consultar produto com id existente. Para o teste, você deve fazer uma requisição do tipo GET no endpoint /products/{id} onde id = 2, 
+conforme ilustrado na Figura 1a (abaixo). Em seguida, você deverá verificar se o status da requisição corresponde a 200 (Ok), obter o corpo da resposta e verificar se os campos id, name,
+imgUrl, price, categories.id e categories.name correspondem aos valores apresentados na Figura 1b (abaixo).
+
+![alt text](image-11.png)
+
+### JSON
+
+```json
+{
+   "id": 2,
+   "name": "Smart TV",
+   "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore",
+   "price": 2190.0,
+   "imgUrl": "https://raw.githubusercontent.com/devsuperior/dscatalog-resources/master/backend/img/2-big.jpg",
+   "categories": [
+       {
+           "id": 3,
+           "name": "Computadores"
+       },
+       {
+           "id": 2,
+           "name": "Eletrônicos"
+       }
+   ]
+}
+```
+
+### findById (id existe)
+
+```java
+    @Test
+    public void findByIdShouldReturnProductWhenIdExists() {
+        existingId = 2L;
+
+        given()
+                .get("/products/{id}", existingId)
+                .then()
+                .statusCode(200)
+                .assertThat().body("id", is(2))
+                //para comparar String, usamos equalTo
+                .assertThat().body("name", equalTo("Smart TV"))
+                .assertThat().body("imgUrl", equalTo("https://raw.githubusercontent.com/devsuperior/dscatalog-resources/master/backend/img/2-big.jpg"))
+                .assertThat().body("price", is(2190.0F))
+                //para verificarmos arrays
+                .assertThat().body("categories.id", hasItems(3, 2))
+                .assertThat().body("categories.name", hasItems("Eletrônicos", "Computadores"));
+    }
+```
+
+## Problema 2: Consultar produtos
+
+Implemente os testes de API usando Rest Assured para consultar produtos (método GET do ProductController), considerando os seguintes cenários.
+
+1. Busca paginada exibe listagem paginada quando campo nome não preenchido e checa se os produtos Macbook Pro e PC Gamer Tera estão contidos
+
+```java
+    @Test
+    public void findAllShouldReturnAllProductsWhenNameIsEmpty() {
+
+        given()
+                .get("/products?page=0")
+                .then()
+                .statusCode(200)
+                .assertThat().body("content.name", hasItems("Macbook Pro", "PC Gamer Tera"));
+    }
+```
+
+2. Busca paginada filtra produtos por nome e exibe listagem paginada quando campo nome preenchidos
+
+```java
+    @Test
+    public void findAllShouldReturnPagedWhenNameIsFilled() {
+
+        given()
+        .get("/products?page=0&pageSize=10&name={name}", "Macbook Pro")
+                .then()
+                .statusCode(200)
+                .assertThat().body("content.id[0]", is(3))
+                .assertThat().body("content.name[0]", equalTo("Macbook Pro"))
+                .assertThat().body("content.price[0]", is(1250.0F));
+
+    }
+```
+
+3. Busca paginada filtra produtos de forma paginada e filtra produtos com preço maior que 2000.0
+
+```java
+    @Test
+    public void findAllShouldReturnPagedWhenProductPriceGreaterThan2000() {
+
+        given()
+                //usamos tamanho 25 para obter todos os produtos
+                .get("/products?size=25")
+                .then()
+                .statusCode(200)
+                //chamamos a lista de content (do postman), procurando todos os produtos
+                //que possuem preço maior que 2000 e pegamos somente o name deles
+                .body("content.findAll { it.price > 2000}.name", hasItems("Smart TV", "PC Gamer Weed"));
+    }
+```
+
+## Problema 3: Inserir produto
+
+Implemente os testes de API usando Rest Assured para inserção de produto (método POST do ProductController), considerando os seguintes cenários. Lembre-se de inserir o token no cabeçalho da requisição.
+
+Se olharmos uma requisiçao Postman, nós passamos no body os dados a serem inseridos, correto?
+
+![alt text](image-13.png)
+
+Se repararmos bem, o lado esquerdo (parâmetro) é sempre uma String. Já o valor inserido é variável, pode ser String, Double (float). Já nas categorias, temos uma lista de objetos.
+
+Logo, é exatamente o que já estudamos antes do Map que recebe dois tipos de dados, veja:
+
+![alt text](image-14.png)
+
+⬆️ Esse é especificamente para o POST. Caso vá fazer um PUT, crie um separadamente para ele.
+
+![alt text](image-15.png)
+
+Nós vamos dando um put até chegar em categories. Veja na imagem do Postman acima, que é inserido uma lista de categorias. Essa lista é a mesma coisa desse Map, possui uma Key ("id") e um valor.
+
+Portanto, criaremos uma Lista, que conterá um Map de ``<String, Object>``, igual a de cima.
+
+Instanciaremos dois maps "category1 e category2", se tivesse a terceira, continuaríamos. Iremos inserir manualmente o "id" e o valor que está no PUT.
+
+Após isso, alocamos esses Map's dentro da lista e por fim, daremos o PUT no Map inicial criado.
+
+Ok, e para transformar esse Map criado em um objeto JSON? 
+
+Dentro dos métodos, faremos o seguinte:
+
+![alt text](image-16.png)
+
+Essa requisição é diferente, pois precisamos passar o token (admin ou client), ela é a PRIMEIRA coisa a ser passada no given, veja:
+
+![alt text](image-17.png)
+
+1. Inserção de produto insere produto com dados válidos quando logado como admin
+2. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e campo name for inválido
+3. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e campo description for inválido
+4. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e campo price for negativo
+5. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e campo price for zero
+6. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e não tiver categoria associada
+7. Inserção de produto retorna 403 quando logado como cliente
+8. Inserção de produto retorna 401 quando não logado como admin ou cliente
