@@ -729,11 +729,147 @@ Essa requisição é diferente, pois precisamos passar o token (admin ou client)
 
 ![alt text](image-17.png)
 
+## TokenUtil com RestAssured
+
+Para que possamos adquirir o token, dessa vez será diferente.
+
+Criaremos sim a classe TokenUtil no pacote de teste no projeto de restassured, mas faremos o seguinte:
+
+1. Criaremos um método que retornará uma Response e faremos um POST, passando username e password do usuário, veja:
+
+```java
+    private static Response authRequest(String username, String password) throws Exception {
+        return given()
+                .auth()
+                .preemptive()
+                .basic("myclientid", "myclientsecret")
+                //contentType extamente o que estamos passando na requisição de login
+                //do Postman (no body)
+                .contentType("application/x-www-form-urlencoded")
+                .formParam("grant-type", "password")
+                .formParam("username", username)
+                .formParam("username", password)
+                .when()
+                .post("/oauth2/token");
+
+    }
+```
+
+2. Depois, criaremos mais um método para obter o acesstoken. Afinal, quando rodamos uma requisiçaõ de POST de login, é o que ele retorna, correto?
+
+![alt text](image-18.png)
+
+```java
+    private static String obtainAccessToken(String username, String password) throws Exception {
+        Response response = authRequest(username, password);
+
+        JsonPath jsonBody = response.jsonPath();
+
+        return jsonBody.getString("access_token");
+    }
+```
+
+![alt text](image-19.png)
+
+Após obter o Token de acesso, voltar a nossa classe de Teste e inicializar as variáveis.
+
+![alt text](image-21.png)
+
 1. Inserção de produto insere produto com dados válidos quando logado como admin
+
+```java
+    @Test
+    public void insertShouldReturnProductCreatedWhenAdminLogged() {
+
+        JSONObject newProduct = new JSONObject(postProductInstance);
+
+        String productAsString = newProduct.toString();
+
+
+        given()
+                //isso serve para especificar o tipo da informação
+                .header("Content-type", "application/json")
+                .header("Authorization", "Bearer " + adminToken)
+                .body(productAsString)
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+        .when()
+                .post("/products")
+        .then()
+                .statusCode(201)
+                .body("name", equalTo("Meu produto"))
+                .body("price", is(50.0F))
+                .body("categories.id", hasItems(2, 3));
+
+    }
+```
+
 2. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e campo name for inválido
+
+```java
+
+```
 3. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e campo description for inválido
+
+```java
+```
+
 4. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e campo price for negativo
 5. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e campo price for zero
 6. Inserção de produto retorna 422 e mensagens customizadas com dados inválidos quando logado como admin e não tiver categoria associada
+
+```java
+    @Test
+    public void insertShouldReturn422AndCustomMessageWhenAdminLoggedAndNoCategories() {
+        //colocando propriedade de categorias zerada
+        postProductInstance.put("categories", null);
+        JSONObject newProduct = new JSONObject(postProductInstance);
+
+        String productAsString = newProduct.toString();
+
+        given()
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + adminToken)
+                .body(productAsString)
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .when()
+                .post("/products")
+                .then()
+                .statusCode(422)
+                .body("errors.message[0]", equalTo("Deve ter pelo menos uma categoria"));
+    }
+```
 7. Inserção de produto retorna 403 quando logado como cliente
 8. Inserção de produto retorna 401 quando não logado como admin ou cliente
+
+
+^ colocar depois manualmente tudo do (tirando do repositorio do restassured)
+
+## Problema 4: Deletar produto
+
+Implemente os testes de API usando Rest Assured para deleção de produto (método DELETE do ProductController), considerando os seguintes cenários. 
+Lembre-se de inserir o token no cabeçalho da requisição.
+
+1. Deleção de produto deleta produto existente quando logado como admin
+2. Deleção de produto retorna 404 para produto inexistente quando logado como admin
+3. Deleção de produto retorna 400 para produto dependente quando logado como admin
+4. Deleção de produto retorna 403 quando logado como cliente
+5. Deleção de produto retorna 401 quando não logado como admin ou cliente
+
+## Problema 5: Consultar pedido por id
+
+Implemente os testes de API usando Rest Assured para consulta de pedidos por id (método GET do OrderController), considerando os seguintes cenários. 
+Lembre-se de inserir o token no cabeçalho da requisição.
+
+Primeiro, criar a classe OrderControllerRA
+
+1. Busca de pedido por id retorna pedido existente quando logado como admin
+2. Busca de pedido por id retorna pedido existente quando logado como cliente e o pedido pertence ao usuário
+3. Busca de pedido por id retorna 403 quando pedido não pertence ao usuário
+4. Busca de pedido por id retorna 404 para pedido inexistente quando logado como admin
+5. Busca de pedido por id retorna 404 para pedido inexistente quando logado como cliente
+6. Busca de pedido por id retorna 401 quando não logado como admin ou cliente
+
+
+
